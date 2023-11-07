@@ -27,4 +27,4 @@ rain <- read_excel("BdL_Rain.xlsx")
 rain$datetoday <- as.Date("2023-10-31")
 
 saveRDS(rain,file="RainForecast.Rds")
-save(rain,file="RainForecast.Rds.Rda")
+save(rain,file="RainForecast.Rda")
