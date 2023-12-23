@@ -24,7 +24,29 @@ library(RColorBrewer)
 
 rain <- read_excel("BdL_Rain.xlsx")
 
-rain$datetoday <- as.Date("2023-10-31")
+# Generate date-based variables
+rain$datetoday <- Sys.Date()
+rain$MonthNum <- format(rain$Date, "%m")
+rain$Year <- format(rain$Date, "%Y")
+
+rain <- rain %>% mutate(Month = case_when(
+  MonthNum == "01" ~ "January",
+  MonthNum == "02" ~ "February",
+  MonthNum == "03" ~ "March",
+  MonthNum == "04" ~ "April",
+  MonthNum == "05" ~ "May",
+  MonthNum == "06" ~ "June",
+  MonthNum == "07" ~ "July",
+  MonthNum == "08" ~ "August",
+  MonthNum == "09" ~ "September",
+  MonthNum == "10" ~ "October",
+  MonthNum == "11" ~ "November",
+  MonthNum == "12" ~ "December"
+))
+
+# Define the order of months
+month_order <- c("January","February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+rain$Month <- factor(rain$Month, levels = month_order, ordered = TRUE)
 
 saveRDS(rain,file="RainForecast.Rds")
 save(rain,file="RainForecast.Rda")

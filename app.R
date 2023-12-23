@@ -18,6 +18,9 @@ library(shinythemes)
 library(haven)
 library(labelled)
 library(foreign)
+library(ggridges)
+library(viridis)
+library(hrbrthemes)
 
 ##########################################
 ####   User interface                 ####
@@ -28,57 +31,69 @@ library(foreign)
 # ------------------
 
 ui <- navbarPage(
-  "Rain forecasting",
+  "Bois-de-Lessines Rainfall",
   theme = shinytheme("flatly"),
   tabPanel(
     "Main",
-    # App title ----
     titlePanel(div(
-      windowTitle = "ERASE-TBSG",
-      img(src = "image.png", width = "100%", class = "bg"),
+      windowTitle = "GraduatEmploymentSG",
+      img(src = "Snow.jpg", width = "100%", class = "bg"),
     )),
-    
-    # Infobox with today's date
-    
     fluidRow(
-      style = "margin-bottom: 20px;",  # Add some margin to separate from other content
+      style = "margin-bottom: 20px;",
       div(
-        class = "custom-infobox",  # Add a custom CSS class
+        class = "custom-infobox",
         infoBox(
-          "Last date collected:  ",
-          "2023-10-31",
+          "Today's date:  ",
+          Sys.Date(),
           icon = icon("calendar"),
           width = 3
         )
       )
     ),
-    
     tags$br(),
-    
-    ##########################################
-    ####  Panel: Main>Summary             ####
-    ##########################################
-    
     tabsetPanel(
       type = "tabs",
       tabPanel(
         "Summary",
-      
-        #### Rainfall over time  
-        
-        fluidRow(
-          column(6, plotlyOutput("raintime"))
-        ),
-      ),
+        sidebarLayout(
+          sidebarPanel(
+            h3("Rain average"),
+            tags$br(),
+            checkboxGroupInput(
+              "checkGroup",
+              label = "Select year",
+              choices = list(
+                "2023" = "2023",
+                "2024" = "2024"
+              ),
+              selected = list(
+                "2023" = "2023",
+                "2024" = "2024"
+              )
+            ),
+            tags$br(),
+            textInput("newWater", "Enter Water (mm):"),
+            textInput("newMonth", "Enter Month:"),
+            numericInput("newYear", "Enter Year:", min = 1900, max = 2100, value = 2023),
+            actionButton("addDataBtn", "Add Data")
+          ),
+          mainPanel(
+            h3("Summary"),
+            plotlyOutput(outputId = "boxPlot"),
+            tags$br(),
+            tags$br()
+          )
+        )
+      )
     )
   )
 )
-
 ##########################################
 ####   Attaching datasets             ####
 ##########################################
 
-rain <- readRDS("RainForecast.Rda")
+rain <- readRDS("RainForecast.Rds")
 
 ## Setting data tables view
 
@@ -105,24 +120,97 @@ server <- function(session, input, output) {
   
   ## Rain fall over time
 
-  output$raintime <- renderPlotly({
-    colmap <- c("#193300",
-                "#4C9900",
-                "#B2FF66")
+  dent <-  reactive({
+    return(rain[rain$Year %in% input$checkGroup, ])
     
-    rain <- rain %>%
-      arrange(Date) 
+  })
+  
+  # render density plot
+  
+  output$densityPlot <- renderPlotly({
+    colmap <- c("#1A237E",
+                "#283593",
+                "#303F9F",
+                "#3949AB",
+                "#3F51B5",
+                "#5C6BC0",
+                "#7986CB",
+                "#9FA8DA",
+                "#C5CAE9",
+                "#E8EAF6",
+                "#BBDEFB",
+                "#90CAF9")
     
     ggplotly(
-      ggplot(rain, aes(x = Date, y = Measurement)) +
-        geom_line() +
-        labs(
-          title = "Rain fall over time",
-          x = "Date",
-          y = "Rain fall (mm)"
-        ) +
-        scale_color_manual(values = colmap)
+      ggplot(data = dent(), aes_string(x = "`Water (mm)`")) +
+        geom_density(aes(fill = Month), size = 1, alpha=0.75) +
+        theme(legend.position = "bottom") + labs(x = "Water (mm)") +
+        scale_fill_manual(values = colmap) +
+        theme_hc() +
+        theme(
+          legend.title = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank()
+        )
+    ) %>% layout(legend = list(orientation = "h",
+                               y = 0, x = 0))
+    
+  })
+  
+  
+  # --------------------
+  # box plot section
+  # --------------------
+  
+  # filter the checkgroup input:
+  
+  uniMedian <- reactive({
+    rain_subset <- rain[rain$Year %in% input$checkGroup, ]
+    return(rain_subset)
+  })
+  
+  
+  output$boxPlot <- renderPlotly({
+    colmap <- c("#1A237E",
+                "#283593",
+                "#303F9F",
+                "#3949AB",
+                "#3F51B5",
+                "#5C6BC0",
+                "#7986CB",
+                "#9FA8DA",
+                "#C5CAE9",
+                "#E8EAF6",
+                "#BBDEFB",
+                "#90CAF9")
+    
+    data_subset <- uniMedian()
+    
+    p <- ggplot(
+      data = data_subset, 
+      aes(
+        x = Month, 
+        y = `Water (mm)`, 
+        fill = Month
+      )) +
+      geom_boxplot(size = 1, alpha = 0.75) +
+      labs(x = "Month") +
+      scale_fill_manual(values = colmap)
+    
+    ggplotly(
+      p,
+      tooltip = "text",
+      height = 500
     )
+  })
+  
+  observeEvent(input$addDataBtn, {
+    newDataRow <- data.frame(
+      `Water (mm)` = as.numeric(input$newWater),
+      Month = as.character(input$newMonth),
+      Year = as.numeric(input$newYear)
+    )
+    rain <<- rbind(rain, newDataRow)
   })
   
 }
