@@ -28,6 +28,7 @@ rain <- read_excel("BdL_Rain.xlsx")
 rain$datetoday <- Sys.Date()
 rain$MonthNum <- format(rain$Date, "%m")
 rain$Year <- format(rain$Date, "%Y")
+rain$Year <- as.numeric(rain$Year)
 
 rain <- rain %>% mutate(Month = case_when(
   MonthNum == "01" ~ "January",
@@ -47,6 +48,8 @@ rain <- rain %>% mutate(Month = case_when(
 # Define the order of months
 month_order <- c("January","February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
 rain$Month <- factor(rain$Month, levels = month_order, ordered = TRUE)
+
+# Trend over time 
 
 saveRDS(rain,file="RainForecast.Rds")
 save(rain,file="RainForecast.Rda")

@@ -21,6 +21,7 @@ library(foreign)
 library(ggridges)
 library(viridis)
 library(hrbrthemes)
+library(doBy)
 
 ##########################################
 ####   User interface                 ####
@@ -84,7 +85,28 @@ ui <- navbarPage(
             tags$br(),
             tags$br()
           )
-        )
+        ),
+        
+        sidebarLayout(
+          sidebarPanel(
+            h5("Table with data by date to help visualise the latest date entered"),
+            tags$br(),
+            radioButtons(
+              "radio",
+              label = "Select year",
+              choices = list(
+                "2023" = "2023",
+                "2024" = "2024"
+              ),
+              selected = "2023" 
+            ),
+          ),
+          
+          mainPanel(
+            dataTableOutput("PostWindowTable"),
+            tags$hr()
+          )
+        ),
       )
     )
   )
@@ -125,44 +147,7 @@ server <- function(session, input, output) {
     
   })
   
-  # render density plot
-  
-  output$densityPlot <- renderPlotly({
-    colmap <- c("#1A237E",
-                "#283593",
-                "#303F9F",
-                "#3949AB",
-                "#3F51B5",
-                "#5C6BC0",
-                "#7986CB",
-                "#9FA8DA",
-                "#C5CAE9",
-                "#E8EAF6",
-                "#BBDEFB",
-                "#90CAF9")
-    
-    ggplotly(
-      ggplot(data = dent(), aes_string(x = "`Water (mm)`")) +
-        geom_density(aes(fill = Month), size = 1, alpha=0.75) +
-        theme(legend.position = "bottom") + labs(x = "Water (mm)") +
-        scale_fill_manual(values = colmap) +
-        theme_hc() +
-        theme(
-          legend.title = element_blank(),
-          axis.title.x = element_blank(),
-          axis.title.y = element_blank()
-        )
-    ) %>% layout(legend = list(orientation = "h",
-                               y = 0, x = 0))
-    
-  })
-  
-  
-  # --------------------
-  # box plot section
-  # --------------------
-  
-  # filter the checkgroup input:
+  # Box plot
   
   uniMedian <- reactive({
     rain_subset <- rain[rain$Year %in% input$checkGroup, ]
@@ -204,6 +189,8 @@ server <- function(session, input, output) {
     )
   })
   
+  # Adding more data
+  
   observeEvent(input$addDataBtn, {
     newDataRow <- data.frame(
       `Water (mm)` = as.numeric(input$newWater),
@@ -212,6 +199,29 @@ server <- function(session, input, output) {
     )
     rain <<- rbind(rain, newDataRow)
   })
+  
+  # Data table
+  observe({
+    print(input$radio)
+  })
+  
+  filtered_data <- reactive({
+    req(input$radio)
+    rain %>% filter(Year == input$radio)
+  })
+  
+  output$PostWindowTable <- renderDataTable({
+    datatable(
+      rain,
+      rownames = FALSE,
+      class = "table",
+      options = list(pageLength = 10, scrollX = TRUE),
+      colnames = c("Date", "Water (mm)")
+    )
+  })
+  
+  # Trend over time 
+  
   
 }
 
