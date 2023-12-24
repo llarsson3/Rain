@@ -30,6 +30,10 @@ rain$MonthNum <- format(rain$Date, "%m")
 rain$Year <- format(rain$Date, "%Y")
 rain$Year <- as.numeric(rain$Year)
 
+# Earliest and latest date
+min_date <- min(rain$Date, na.rm = TRUE)
+max_date <- max(rain$Date, na.rm = TRUE)
+
 rain <- rain %>% mutate(Month = case_when(
   MonthNum == "01" ~ "January",
   MonthNum == "02" ~ "February",
@@ -53,3 +57,9 @@ rain$Month <- factor(rain$Month, levels = month_order, ordered = TRUE)
 
 saveRDS(rain,file="RainForecast.Rds")
 save(rain,file="RainForecast.Rda")
+
+saveRDS(min_date,file="RainForecast_MinDate.Rds")
+save(min_date,file="RainForecast_MinDate.Rda")
+
+saveRDS(max_date,file="RainForecast_MaxDate.Rds")
+save(max_date,file="RainForecast_MaxDate.Rda")

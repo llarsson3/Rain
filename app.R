@@ -34,12 +34,14 @@ library(doBy)
 ui <- navbarPage(
   "Bois-de-Lessines Rainfall",
   theme = shinytheme("flatly"),
+  
   tabPanel(
     "Main",
     titlePanel(div(
       windowTitle = "GraduatEmploymentSG",
       img(src = "Snow.jpg", width = "100%", class = "bg"),
     )),
+    
     fluidRow(
       style = "margin-bottom: 20px;",
       div(
@@ -52,7 +54,13 @@ ui <- navbarPage(
         )
       )
     ),
+    
     tags$br(),
+    
+    dateRangeInput("dateRange", "Select Date Range", start = min_date, end = Sys.Date()),
+    
+    tags$br(),
+    
     tabsetPanel(
       type = "tabs",
       tabPanel(
@@ -79,11 +87,25 @@ ui <- navbarPage(
             numericInput("newYear", "Enter Year:", min = 1900, max = 2100, value = 2023),
             actionButton("addDataBtn", "Add Data")
           ),
+          
           mainPanel(
             h3("Summary"),
             plotlyOutput(outputId = "boxPlot"),
             tags$br(),
             tags$br()
+            )
+        ),
+        
+        sidebarLayout(
+          sidebarPanel(
+            h4("Quantity of rain over time"),
+            tags$br(),
+            textOutput("latestDateInfo")
+          ),
+          
+          mainPanel(
+            plotOutput("timeSeriesPlot"),
+            tags$hr()
           )
         ),
         
@@ -116,6 +138,8 @@ ui <- navbarPage(
 ##########################################
 
 rain <- readRDS("RainForecast.Rds")
+min_date <- readRDS("RainForecast_MinDate.Rds")
+max_date <- readRDS("RainForecast_MaxDate.Rds")
 
 ## Setting data tables view
 
@@ -180,13 +204,15 @@ server <- function(session, input, output) {
       )) +
       geom_boxplot(size = 1, alpha = 0.75) +
       labs(x = "Month") +
-      scale_fill_manual(values = colmap)
+      scale_fill_manual(values = colmap) +
+      theme_minimal()
     
     ggplotly(
       p,
       tooltip = "text",
       height = 500
-    )
+    ) %>%
+      layout(font = list(family = "sans-serif"))
   })
   
   # Adding more data
@@ -211,8 +237,10 @@ server <- function(session, input, output) {
   })
   
   output$PostWindowTable <- renderDataTable({
+    data_to_display <- filtered_data()
+    data_to_display$Date <- as.Date(data_to_display$Date)
     datatable(
-      rain,
+      data_to_display[, c("Date", "Water (mm)")],
       rownames = FALSE,
       class = "table",
       options = list(pageLength = 10, scrollX = TRUE),
@@ -220,8 +248,37 @@ server <- function(session, input, output) {
     )
   })
   
-  # Trend over time 
-  
+    
+    # Trend over time
+  output$timeSeriesPlot <- renderPlot({
+    
+    rain_ma <- rain %>%
+      arrange(as.Date(Date)) %>%
+      mutate(MovingAverage = zoo::rollmean(`Water (mm)`, k = 7, fill = NA))
+    
+    ggplot(data = rain, aes(x = as.Date(Date), y = `Water (mm)`)) +
+      geom_bar(stat = "identity", fill = "#303F9F") +
+      geom_line(data = rain_ma, aes(x = as.Date(Date), y = MovingAverage), color = "#90CAF9", size = 1) +
+      labs(x = "Date", y = "Water (mm)", title = "Water (mm) over time with moving average") +
+      scale_x_date(breaks = seq(min(as.Date(rain$Date)), max(as.Date(rain$Date)), by = "1 month"),
+                   labels = function(x) format(x, "%Y-%m")) +
+      theme_minimal() +
+      theme(
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size = 14, face = "bold"),
+        axis.title.y = element_text(size = 14, face = "bold"),
+        plot.title = element_text(size = 16),
+        plot.margin = margin(50, 50, 50, 30)
+      )
+  })
+    
+    # Latest date display
+    
+    output$latestDateInfo <- renderText({
+      req(input$dateRange)
+      latest_date <- max(filtered_data()$Date)
+      paste("Latest Date in Selected Range: ", format(latest_date, "%Y-%m-%d"))
+    })
   
 }
 
