@@ -5,7 +5,7 @@ account: bois-de-lessines
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 10843327
-bundleId: 8080527
+bundleId: 8080616
 url: https://bois-de-lessines.shinyapps.io/rain/
 version: 1
 asMultiple: FALSE

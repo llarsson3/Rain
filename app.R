@@ -57,7 +57,7 @@ ui <- navbarPage(
     
     tags$br(),
     
-    dateRangeInput("dateRange", "Select Date Range", start = min_date, end = Sys.Date()),
+    dateRangeInput("dateRange", "Select Date Range", start = Sys.Date(), end = Sys.Date()),
     
     tags$br(),
     
@@ -142,6 +142,8 @@ min_date <- readRDS("RainForecast_MinDate.Rds")
 max_date <- readRDS("RainForecast_MaxDate.Rds")
 
 ## Setting data tables view
+
+options(shiny.maxRequestSize = 160*1024^2)
 
 opts <- list(
   language = list(url = "//cdn.datatables.net/plug-ins/1.10.19/i18n/English.json"),
